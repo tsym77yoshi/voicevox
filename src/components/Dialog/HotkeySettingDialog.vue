@@ -214,6 +214,10 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import {
+  HotkeyEditorSettingType,
+  getHotkeyEditorSettings,
+} from "./HotkeyClassification";
 import { useStore } from "@/store";
 import {
   HotkeyActionNameType,
