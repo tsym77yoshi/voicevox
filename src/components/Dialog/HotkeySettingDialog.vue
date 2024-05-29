@@ -406,7 +406,7 @@ const resetHotkey = async (action: string) => {
   .hotkey-line {
     display: flex;
     width: 100%;
-    border-bottom: solid 1px grey;
+    border-bottom: solid 1px colors.$surface;
     padding: 2px 0;
 
     > span {
