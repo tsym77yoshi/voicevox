@@ -45,82 +45,65 @@
 
       <QPageContainer>
         <QPage>
-          <QTable
-            v-model:pagination="hotkeyPagination"
-            flat
-            dense
-            hide-bottom
-            card-class="bg-background text-display"
-            table-class="text-display"
-            row-key="hotkeyIndexes"
-            :filter="hotkeyFilter"
-            :rows="hotkeySettings"
-            :columns="hotkeyColumns"
-            class="hotkey-table"
-          >
-            <template #header="tableProps">
-              <QTr :props="tableProps">
-                <QTh
-                  v-for="col of tableProps.cols"
-                  :key="col.name"
-                  :props="tableProps"
-                >
-                  {{ col.label }}
-                </QTh>
-              </QTr>
-            </template>
-
-            <template #body="tableProps">
-              <QTr :props="tableProps">
-                <QTd
-                  :key="tableProps.cols[0].name"
-                  no-hover
-                  :props="tableProps"
-                >
-                  {{ tableProps.row.action }}
-                </QTd>
-                <QTd
-                  :key="tableProps.cols[1].name"
-                  no-hover
-                  :props="tableProps"
-                >
-                  <QBtn
-                    dense
-                    text-color="display"
-                    padding="none sm"
-                    flat
-                    :disable="checkHotkeyReadonly(tableProps.row.action)"
-                    no-caps
-                    :label="
-                      getHotkeyText(
-                        tableProps.row.action,
-                        tableProps.row.combination,
-                      )
-                        .split(' ')
-                        .map((hotkeyText) => {
-                          // Mac の Meta キーは Cmd キーであるため、Meta の表示名を Cmd に置換する
-                          // Windows PC では Meta キーは Windows キーだが、使用頻度低と考えられるため暫定的に Mac 対応のみを考慮している
-                          return hotkeyText === 'Meta' ? 'Cmd' : hotkeyText;
-                        })
-                        .join(' + ')
-                    "
-                    @click="openHotkeyDialog(tableProps.row.action)"
-                  />
-                  <QBtn
-                    rounded
-                    flat
-                    icon="settings_backup_restore"
-                    padding="none sm"
-                    size="1em"
-                    :disable="checkHotkeyReadonly(tableProps.row.action)"
-                    @click="resetHotkey(tableProps.row.action)"
-                  >
-                    <QTooltip :delay="500">デフォルトに戻す</QTooltip>
-                  </QBtn>
-                </QTd>
-              </QTr>
-            </template>
-          </QTable>
+          <div class="hotkey-tree scroll">
+            <div class="hotkey-line header">
+              <span>
+                <span>操作</span>
+                <span class="hotkey-button">ショートカットキー</span>
+              </span>
+            </div>
+            <QTree
+              :nodes="hotkeyNode"
+              node-key="label"
+              dense
+              default-expand-all
+              :filter="hotkeyFilter"
+            >
+              <template #default-header="prop">
+                <div class="bg-background text-display hotkey-line">
+                  <span v-if="prop.node.combination == undefined">
+                    {{ prop.node.label }}
+                  </span>
+                  <span v-else>
+                    <span>
+                      {{ prop.node.label }}
+                    </span>
+                    <QBtn
+                      dense
+                      text-color="display"
+                      padding="none sm"
+                      flat
+                      :disable="checkHotkeyReadonly(prop.node.label)"
+                      no-caps
+                      :label="
+                        getHotkeyText(prop.node.label, prop.node.combination)
+                          .split(' ')
+                          .map((hotkeyText) => {
+                            // Mac の Meta キーは Cmd キーであるため、Meta の表示名を Cmd に置換する
+                            // Windows PC では Meta キーは Windows キーだが、使用頻度低と考えられるため暫定的に Mac 対応のみを考慮している
+                            return hotkeyText === 'Meta' ? 'Cmd' : hotkeyText;
+                          })
+                          .join(' + ')
+                      "
+                      class="hotkey-button"
+                      @click="openHotkeyDialog(prop.node.label)"
+                    />
+                    <QBtn
+                      rounded
+                      flat
+                      icon="settings_backup_restore"
+                      padding="none sm"
+                      size="1em"
+                      :disable="checkHotkeyReadonly(prop.node.label)"
+                      @click="resetHotkey(prop.node.label)"
+                    >
+                      <QTooltip :delay="500">デフォルトに戻す</QTooltip>
+                    </QBtn>
+                  </span>
+                </div>
+              </template>
+            </QTree>
+          </div>
         </QPage>
       </QPageContainer>
     </QLayout>
@@ -214,10 +197,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import {
-  HotkeyEditorSettingType,
-  getHotkeyEditorSettings,
-} from "./HotkeyClassification";
+import { hotkeyClassifications } from "./HotkeyClassification";
 import { useStore } from "@/store";
 import {
   HotkeyActionNameType,
@@ -242,33 +222,40 @@ const hotkeySettingDialogOpenComputed = computed({
 
 const isHotkeyDialogOpened = ref(false);
 
-const hotkeyPagination = ref({ rowsPerPage: 0 });
 const hotkeyFilter = ref("");
 
 const hotkeySettings = computed(() => store.state.hotkeySettings);
 
-// FIXME: satisfiesを使うなどで型を表現したい
-const hotkeyColumns = ref<
-  {
-    name: string;
-    align: "left" | "right" | "center" | undefined;
+type hotkeyNodeType = {
+  label: string;
+  children: {
     label: string;
-    field: string;
-  }[]
->([
-  {
-    name: "action",
-    align: "left",
-    label: "操作",
-    field: "action",
-  },
-  {
-    name: "combination",
-    align: "left",
-    label: "ショートカットキー",
-    field: "combination",
-  },
-]);
+    children: {
+      label: HotkeyActionNameType;
+      combination: HotkeyCombination;
+    }[];
+  }[];
+};
+
+const hotkeyNode = computed((): hotkeyNodeType[] => {
+  const hotkeyNodes: hotkeyNodeType[] = hotkeyClassifications.map(
+    (hotkeyClassification) => ({
+      label: hotkeyClassification.label,
+      children: hotkeyClassification.children.map((child) => ({
+        label: child.label,
+        children: child.actions.map((action) => ({
+          label: action,
+          combination: HotkeyCombination(
+            hotkeySettings.value.find(
+              (hotkeySetting) => hotkeySetting.action === action,
+            )?.combination || "",
+          ),
+        })),
+      })),
+    }),
+  );
+  return hotkeyNodes;
+});
 
 const lastAction = ref("");
 const lastRecord = ref(HotkeyCombination(""));
@@ -404,7 +391,7 @@ const resetHotkey = async (action: string) => {
   width: 200px;
 }
 
-.hotkey-table {
+.hotkey-tree {
   width: calc(100vw - #{vars.$window-border-width * 2});
   height: calc(
     100vh - #{vars.$menubar-height + vars.$toolbar-height +
@@ -416,41 +403,51 @@ const resetHotkey = async (action: string) => {
     overflow-x: hidden;
   }
 
-  tbody tr {
-    td button:last-child {
-      float: right;
-      display: none;
-    }
-    &:hover td button:last-child {
-      display: inline-flex;
-      color: colors.$display;
-      opacity: 0.5;
+  .hotkey-line {
+    display: flex;
+    width: 100%;
+    border-bottom: solid 1px grey;
+    padding: 2px 0;
+
+    > span {
+      display: flex;
+      width: 100%;
+      span:first-child {
+        width: calc(100% - 30vw);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .hotkey-button {
+        min-width: 180px;
+      }
+
+      button:last-child {
+        margin-left: auto;
+        display: none;
+        min-width: 180px;
+      }
       &:hover {
-        opacity: 1;
+        button:last-child {
+          display: inline-flex;
+          color: colors.$display;
+          opacity: 0.5;
+
+          &:hover {
+            opacity: 1;
+          }
+        }
       }
     }
   }
 
-  thead tr th {
+  > .header {
     position: sticky;
     top: 0;
     font-weight: bold;
     background-color: colors.$surface;
     z-index: 1;
-  }
-
-  thead tr th:first-child,
-  tbody tr td:first-child {
-    width: 70%;
-    max-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  thead tr th:last-child,
-  tbody tr td:last-child {
-    max-width: 0;
-    min-width: 180px;
+    padding-left: 0.5em;
   }
 }
 

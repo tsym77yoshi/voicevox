@@ -6,9 +6,9 @@ import {
 } from "@/type/preload";
 
 type HotkeyClassificationType = {
-  name: string;
-  classifications: {
-    name: string;
+  label: string;
+  children: {
+    label: string;
     editors: EditorType[];
     actions: HotkeyActionNameType[];
   }[];
@@ -16,15 +16,15 @@ type HotkeyClassificationType = {
 
 export const hotkeyClassifications: HotkeyClassificationType[] = [
   {
-    name: "共通",
-    classifications: [
+    label: "共通",
+    children: [
       {
-        name: "共通操作",
+        label: "共通操作",
         editors: ["talk", "song"],
         actions: ["元に戻す", "やり直す"],
       },
       {
-        name: "ファイル（共通）",
+        label: "ファイル（共通）",
         editors: ["talk", "song"],
         actions: [
           "新規プロジェクト",
@@ -34,17 +34,17 @@ export const hotkeyClassifications: HotkeyClassificationType[] = [
         ],
       },
       {
-        name: "ファイル（トーク）",
+        label: "ファイル（トーク）",
         editors: ["talk"],
         actions: ["テキストを読み込む"],
       },
     ],
   },
   {
-    name: "トーク",
-    classifications: [
+    label: "トーク",
+    children: [
       {
-        name: "音声操作",
+        label: "音声操作",
         editors: ["talk"],
         actions: [
           "音声書き出し",
@@ -55,7 +55,7 @@ export const hotkeyClassifications: HotkeyClassificationType[] = [
         ],
       },
       {
-        name: "詳細調整操作",
+        label: "詳細調整操作",
         editors: ["talk"],
         actions: [
           "ｱｸｾﾝﾄ欄を表示",
@@ -66,7 +66,7 @@ export const hotkeyClassifications: HotkeyClassificationType[] = [
         ],
       },
       {
-        name: "テキスト欄操作",
+        label: "テキスト欄操作",
         editors: ["talk"],
         actions: [
           "テキスト欄を追加",
@@ -77,7 +77,7 @@ export const hotkeyClassifications: HotkeyClassificationType[] = [
         ],
       },
       {
-        name: "キャラクター選択",
+        label: "キャラクター選択",
         editors: ["talk"],
         actions: [
           ...Array.from({ length: 10 }, (_, index) => {
@@ -88,10 +88,10 @@ export const hotkeyClassifications: HotkeyClassificationType[] = [
     ],
   },
   {
-    name: "ソング",
-    classifications: [
+    label: "ソング",
+    children: [
       {
-        name: "ノーツ操作",
+        label: "ノーツ操作",
         editors: ["song"],
         actions: [
           "コピー",
@@ -116,8 +116,8 @@ export const getHotkeyEditorSettings = (
   return hotkeySettings.map((hotkeySetting) => {
     const editors = hotkeyClassifications.flatMap(
       (hotkeyClassification) =>
-        hotkeyClassification.classifications.find((classification) =>
-          classification.actions.includes(hotkeySetting.action),
+        hotkeyClassification.children.find((child) =>
+          child.actions.includes(hotkeySetting.action),
         )?.editors || [],
     );
 

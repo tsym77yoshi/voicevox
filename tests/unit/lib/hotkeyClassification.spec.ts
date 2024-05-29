@@ -6,8 +6,8 @@ it("ホットキーの分類に過不足がない", () => {
   const actions = hotkeyActionNameSchema.options;
   const classifiedActions: HotkeyActionNameType[] = [];
   hotkeyClassifications.forEach((classification) => {
-    classification.classifications.forEach((actions) => {
-      actions.actions.forEach((action) => {
+    classification.children.forEach((child) => {
+      child.actions.forEach((action) => {
         classifiedActions.push(action);
       });
     });
